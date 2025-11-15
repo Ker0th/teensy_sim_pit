@@ -48,9 +48,6 @@ if (WIN32)
   target_include_directories(irsdk_static INTERFACE "${IRS_SDK_ROOT}")
   target_compile_definitions(irsdk_static INTERFACE _CRT_SECURE_NO_WARNINGS)
 
-  # If the SDK requires SetupAPI at link time, expose it so consumers get it automatically
-  #target_link_libraries(irsdk_static INTERFACE setupapi)
-
   # Link the SDK into your executable (setupapi will be propagated via the INTERFACE above)
   target_link_libraries(teensy_sim_pit PRIVATE irsdk_static)
 endif()

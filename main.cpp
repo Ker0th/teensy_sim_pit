@@ -67,7 +67,14 @@ irsdkCVar brake_raw("BrakeRaw"); // (float) Raw brake input 0=brake released to 
 
 int main()
 {
-	irsdkClient::instance().waitForData(200);
+	for (int i = 0; i < 60*30; i++) {
+		std::cout << "Connecting to iRacing SDK...\n";
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		if (irsdkClient::instance().waitForData(200)) {
+			std::cout << "Connected to iRacing SDK!\n";
+			break;
+		}
+	}
     printf("Reload custom car textures for all cars\n");
 	while (irsdkClient::instance().isConnected()) {
 		if (irsdkClient::instance().waitForData(16)) {
