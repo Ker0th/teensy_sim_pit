@@ -28,7 +28,7 @@ if (WIN32)
   set(IRS_SDK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/SDK/irsdk_1_19")
 
   # Path to the prebuilt .lib you provided (use forward slashes)
-  set(IRS_SDK_PREBUILT_LIB "C:/Code/teensy_sim_pit/SDK/irsdk_1_19/x64/Release/irsdk_client.lib")
+  set(IRS_SDK_PREBUILT_LIB "${IRS_SDK_ROOT}/x64/Release/irsdk_client.lib")
 
   if (NOT EXISTS "${IRS_SDK_PREBUILT_LIB}")
     message(FATAL_ERROR "Prebuilt iRacing SDK library not found: ${IRS_SDK_PREBUILT_LIB}")
@@ -49,7 +49,7 @@ if (WIN32)
   target_compile_definitions(irsdk_static INTERFACE _CRT_SECURE_NO_WARNINGS)
 
   # If the SDK requires SetupAPI at link time, expose it so consumers get it automatically
-  target_link_libraries(irsdk_static INTERFACE setupapi)
+  #target_link_libraries(irsdk_static INTERFACE setupapi)
 
   # Link the SDK into your executable (setupapi will be propagated via the INTERFACE above)
   target_link_libraries(teensy_sim_pit PRIVATE irsdk_static)
