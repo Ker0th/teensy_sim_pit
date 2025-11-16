@@ -6,6 +6,7 @@
 #include <iostream>
 #include <thread>
 #include <signal.h>
+#include <Windows.h>
 
 // Live weather info, may change as session progresses
 irsdkCVar g_AirDensity("AirDensity"); // (float) kg/m^3, Density of air at start/finish line
@@ -65,13 +66,18 @@ irsdkCVar g_CarIdxPaceFlags("CarIdxPaceFlags"); // (int) irsdk_PaceFlags, Pacing
 irsdkCVar throttle_raw("ThrottleRaw"); // (float) Raw throttle input 0=off throttle to 1=full throttle
 irsdkCVar brake_raw("BrakeRaw"); // (float) Raw brake input 0=brake released to 1=max pedal force
 
+TeensySimPIT teensySimPit;
+
+
 int main()
 {
 	for (int i = 0; i < 60*30; i++) {
+		teensySimPit.write_wind_to_teensy();
 		std::cout << "Connecting to iRacing SDK...\n";
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		if (irsdkClient::instance().waitForData(200)) {
 			std::cout << "Connected to iRacing SDK!\n";
+
 			break;
 		}
 	}
@@ -80,9 +86,13 @@ int main()
 		if (irsdkClient::instance().waitForData(16)) {
 			printf("Data is available\n");
 			float car_speed = irsdkClient::instance().getVarFloat("Speed", 0);
-			int carRpm = g_CarRPM.getFloat();
+			float carRpm = g_CarRPM.getFloat();
 			std::cout << "Car Speed: " << car_speed << std::endl;
 			std::cout << "Car RPM: " << carRpm << std::endl;
+			float throttle = throttle_raw.getFloat();
+			float brake = brake_raw.getFloat();
+			std::cout << "Throttle: " << throttle << " Brake: " << brake << std::endl;
+
 		}
 	}
     return 0;

@@ -23,7 +23,7 @@ void TeensySimPIT::read_iracing_telemetry()
 void TeensySimPIT::write_wind_to_teensy()
 {
     // Example: open COM3 (change as needed), send a simple text payload and close.
-    const std::string port = "COM3"; // change to your port, e.g. "COM4"
+    const std::string port = "COM4"; // change to your port, e.g. "COM4"
     if (!open_serial(port, 115200)) {
         std::cerr << "Failed to open serial port " << port << '\n';
         return;
