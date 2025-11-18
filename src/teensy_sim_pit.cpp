@@ -1,5 +1,6 @@
 ﻿// teensy_sim_pit.cpp : Defines the entry point for the application.
 //
+#pragma once
 #include "teensy_sim_pit.h"
 
 #include <iostream>
@@ -20,7 +21,7 @@ void TeensySimPIT::read_iracing_telemetry()
     // stub
 }
 
-void TeensySimPIT::write_wind_to_teensy()
+void TeensySimPIT::write_string_to_teensy(const std::string &data)
 {
     // Example: open COM3 (change as needed), send a simple text payload and close.
     const std::string port = "COM4"; // change to your port, e.g. "COM4"
@@ -29,8 +30,7 @@ void TeensySimPIT::write_wind_to_teensy()
         return;
     }
 
-    const std::string payload = "WIND:123\n";
-    if (!write_string(payload)) {
+    if (!write_string(data)) {
         std::cerr << "Failed to write payload\n";
     }
 
@@ -38,6 +38,17 @@ void TeensySimPIT::write_wind_to_teensy()
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     close_serial();
+}
+
+std::string TeensySimPIT::convert_cardata_to_string(const carData& data)
+{
+    std::string result = 
+		"carData|SPEED:" + std::to_string(data.speed) +
+        ",RPM:" + std::to_string(data.rpm) +
+        ",THROTTLE:" + std::to_string(data.throttle) +
+		",BRAKE:" + std::to_string(data.brake) + "|";
+
+    return result;
 }
 
 bool TeensySimPIT::write_string(const std::string& text)
@@ -116,4 +127,47 @@ void TeensySimPIT::close_serial()
         CloseHandle(handle_);
         handle_ = nullptr;
     }
+}
+
+void IracingReader::connectToIracingSDK()
+{
+    for (int i = 0; i < 60 * 30; i++) {
+		std::cout << "Connecting to iRacing SDK... " << "timeout in: " << 60 * 30 - i << " seconds" << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        if (irsdkClient::instance().waitForData(200)) {
+            std::cout << "Connected to iRacing SDK!\n";
+            break;
+        }
+    }
+}
+
+bool IracingReader::isConnected()
+{
+    if (irsdkClient::instance().isConnected()) {
+        disconnect_count = 0;
+    } else if (disconnect_count < 5) {
+        disconnect_count++;
+	} else {
+        std::cout << "Disconnected from iRacing SDK!\n";
+        return false;
+	}
+
+    return true;
+}
+
+carData IracingReader::getCarData(int carIndex)
+{
+    return carData();
+}
+
+carData IracingReader::getPlayerCarData()
+{
+	carData data;
+    if (irsdkClient::instance().waitForData(16)) {
+		data.speed = irsdkClient::instance().getVarFloat("Speed", 0) * 3.6; // from m/s to km/h
+	    data.rpm = irsdkClient::instance().getVarFloat("RPM", 0);
+	    data.throttle = irsdkClient::instance().getVarFloat("ThrottleRaw", 0);
+	    data.brake = irsdkClient::instance().getVarFloat("BrakeRaw", 0);
+    }
+	return data;
 }
