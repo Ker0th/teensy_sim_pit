@@ -129,6 +129,14 @@ void TeensySimPIT::close_serial()
     }
 }
 
+
+bool TeensySimPIT::wait_for_ready(unsigned int timeout_ms)
+{
+    
+    return true;
+}
+
+
 void IracingReader::connectToIracingSDK()
 {
     for (int i = 0; i < 60 * 30; i++) {

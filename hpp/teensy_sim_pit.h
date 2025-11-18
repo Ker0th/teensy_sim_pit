@@ -103,6 +103,7 @@ public:
     void close_serial();
     bool write_data(const std::vector<uint8_t>& data);
     bool write_string(const std::string& text);
+    bool wait_for_ready(unsigned int timeout_ms = 5000); // returns true if handshake seen
 
 private:
     HANDLE handle_ = nullptr;
