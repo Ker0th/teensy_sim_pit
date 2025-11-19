@@ -6,12 +6,16 @@
 #include <signal.h>
 #include <Windows.h>
 
-
+const char* HARDCODED_WAV_PATH = R"(C:\Code\teensy_sim_pit\out\build\x64-Debug\sounds\bloop.wav)";
 int main()
 {
 	TeensySimPIT teensySimPit;
 	IracingReader iracingReader;
 	iracingReader.connectToIracingSDK();
+
+	auto sound_path = teensySimPit.get_sound_path("bloop.wav");
+	//std::cout << "sound path: " << sound_path << std::endl;
+	teensySimPit.setup_miniaudio(HARDCODED_WAV_PATH);
 
 	// after opening serial
 	if (!teensySimPit.wait_for_ready(3000)) {
@@ -21,11 +25,14 @@ int main()
 
 	while (iracingReader.isConnected()) {
 		carData playerCarData = iracingReader.getPlayerCarData();
+		teensySimPit.detect_throttle_brake_overlap(playerCarData);
 		std::cout << "Car Speed: " << playerCarData.speed << std::endl;
 		std::cout << "Car RPM: " << playerCarData.rpm << std::endl;
 		std::cout << "Throttle: " << playerCarData.throttle << " Brake: " << playerCarData.brake << std::endl;
 
 		teensySimPit.write_string_to_teensy(teensySimPit.convert_cardata_to_string(playerCarData));
 	}
+
+	teensySimPit.cleanup_miniaudio();
     return 0;
 }
