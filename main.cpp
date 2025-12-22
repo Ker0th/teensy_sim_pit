@@ -13,6 +13,9 @@ int main()
 	IracingReader iracingReader;
 	iracingReader.connectToIracingSDK();
 
+	// Start background reader to avoid busy polling in main loop
+	iracingReader.start_reader();
+
 	auto sound_path = teensySimPit.get_sound_path("bloop.wav");
 	//std::cout << "sound path: " << sound_path << std::endl;
 	teensySimPit.setup_miniaudio(HARDCODED_WAV_PATH);
@@ -24,7 +27,13 @@ int main()
 	// Now start sending — only enqueue when handshake has been observed.
 
 	while (iracingReader.isConnected()) {
-		carData playerCarData = iracingReader.getPlayerCarData();
+		// Wait up to 100ms for a new update (reduces CPU usage compared to tight polling)
+		if (!iracingReader.wait_for_update(100)) {
+			// timed out waiting for data; loop to check connection status again
+			continue;
+		}
+
+		carData playerCarData = iracingReader.getLatestData();
 		teensySimPit.detect_throttle_brake_overlap(playerCarData);
 		std::cout << "Car Speed: " << playerCarData.speed << std::endl;
 		std::cout << "Car RPM: " << playerCarData.rpm << std::endl;
@@ -32,6 +41,9 @@ int main()
 
 		teensySimPit.write_string_to_teensy(teensySimPit.convert_cardata_to_string(playerCarData));
 	}
+
+	// stop background reader
+	iracingReader.stop_reader();
 
 	teensySimPit.cleanup_miniaudio();
     return 0;

@@ -150,13 +150,6 @@ void TeensySimPIT::play_bloop_sound()
         std::cout << "starting to play sound" << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(2));
     }
-    //ma_sound_stop(&sound);
-    // 1. Stop any current playback of this sound object
-
-    // 2. Seek back to the beginning of the file/data
-    // This ensures it starts from the start, not where it was stopped.
-    //ma_sound_seek_to_pcm_frame(&sound, 0);
-
 }
 
 
@@ -213,7 +206,7 @@ bool TeensySimPIT::open_serial(const std::string& port_name, unsigned int baud)
     if (handle_) close_serial();
 
     std::string path = port_name;
-    // For COM ports >= COM10 on Windows, prepend "\\.\" 
+    // For COM ports >= COM10 on Windows, prepend "\\." 
     if (port_name.size() >= 4 && port_name.rfind("COM", 0) == 0) {
         int num = 0;
         try { num = std::stoi(port_name.substr(3)); } catch (...) { num = 0; }
@@ -271,10 +264,15 @@ void TeensySimPIT::close_serial()
 
 bool TeensySimPIT::wait_for_ready(unsigned int timeout_ms)
 {
-    
     return true;
 }
 
+
+// IracingReader threaded implementation
+IracingReader::~IracingReader()
+{
+    stop_reader();
+}
 
 void IracingReader::connectToIracingSDK()
 {
@@ -317,4 +315,71 @@ carData IracingReader::getPlayerCarData()
         data.brake = irsdkClient::instance().getVarFloat("BrakeRaw", 0);
     }
     return data;
+}
+
+void IracingReader::start_reader()
+{
+    bool expected = false;
+    if (!this->running_.compare_exchange_strong(expected, true)) return; // already running
+
+    worker_ = std::thread([this]() {
+        while (this->running_.load()) {
+            // waitForData will return true when new snapshot available or timeout occurs
+            if (irsdkClient::instance().waitForData(100)) {
+                carData data;
+                data.speed = irsdkClient::instance().getVarFloat("Speed", 0) * 3.6f;
+                data.rpm = irsdkClient::instance().getVarFloat("RPM", 0);
+                data.throttle = irsdkClient::instance().getVarFloat("ThrottleRaw", 0);
+                data.brake = irsdkClient::instance().getVarFloat("BrakeRaw", 0);
+
+                {
+                    std::lock_guard<std::mutex> lk(mtx_);
+                    latestData_ = data;
+                    hasData_.store(true);
+                }
+                this->cv_.notify_one();
+            }
+            // small sleep to avoid hot-looping if waitForData returns immediately
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    });
+}
+
+void IracingReader::stop_reader()
+{
+    bool expected = true;
+    if (!this->running_.compare_exchange_strong(expected, false)) {
+        // not running
+        return;
+    }
+
+    if (worker_.joinable()) {
+        worker_.join();
+    }
+}
+
+bool IracingReader::wait_for_update(unsigned int timeout_ms)
+{
+    std::unique_lock<std::mutex> lk(mtx_);
+    if (!hasData_.load()) {
+        if (timeout_ms == 0) {
+            this->cv_.wait(lk, [this]() { return hasData_.load() || !this->running_.load(); });
+        } else {
+            if (!this->cv_.wait_for(lk, std::chrono::milliseconds(timeout_ms), [this]() { return hasData_.load() || !this->running_.load(); })) {
+                return false; // timed out
+            }
+        }
+    }
+
+    if (hasData_.load()) {
+        hasData_.store(false); // consume the data
+        return true;
+    }
+    return false;
+}
+
+carData IracingReader::getLatestData()
+{
+    std::lock_guard<std::mutex> lk(mtx_);
+    return latestData_;
 }

@@ -7,6 +7,10 @@
 #include <windows.h>
 
 #include "miniaudio.h"
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
 
 // Define the implementation in this translation unit only.
 //#define MINIAUDIO_IMPLEMENTATION
@@ -23,16 +27,30 @@ struct carData {
 class IracingReader {
 public:
     IracingReader() = default;
-    ~IracingReader() = default;
+    ~IracingReader();
 
-	void connectToIracingSDK();
+    void connectToIracingSDK();
     bool isConnected();
 
-	carData getCarData(int carIndex);
-	carData getPlayerCarData();
+    carData getCarData(int carIndex);
+    carData getPlayerCarData();
+
+    // Threaded reader control
+    void start_reader();
+    void stop_reader();
+    bool wait_for_update(unsigned int timeout_ms);
+    carData getLatestData();
 
 private:
-    int disconnect_count;
+    int disconnect_count = 0;
+
+    // Threading members
+    std::thread worker_;
+    std::mutex mtx_;
+    std::condition_variable cv_;
+    std::atomic<bool> running_{false};
+    std::atomic<bool> hasData_{false};
+    carData latestData_{};
 
     irsdkCVar AirDensity{"AirDensity"}; // (float) kg/m^3, Density of air at start/finish line
     irsdkCVar AirPressure{"AirPressure"}; // (float) Hg, Pressure of air at start/finish line
@@ -99,13 +117,13 @@ public:
     TeensySimPIT();
     ~TeensySimPIT();
 
-	void detect_throttle_brake_overlap(const carData& data);
+    void detect_throttle_brake_overlap(const carData& data);
     const char* get_sound_path(const std::string &filename);
     bool setup_miniaudio(const char* wavFilePath);
     void cleanup_miniaudio();
-	void play_bloop_sound();
+    void play_bloop_sound();
     void write_string_to_teensy(const std::string &data);
-	std::string convert_cardata_to_string(const carData& data);
+    std::string convert_cardata_to_string(const carData& data);
 
     // Serial helpers
     bool open_serial(const std::string& port_name, unsigned int baud = 115200);
