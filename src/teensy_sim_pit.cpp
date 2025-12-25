@@ -64,7 +64,9 @@ void TeensySimPIT::detect_throttle_brake_overlap(const carData& data)
     if (data.throttle > overlap_threshold && data.brake > overlap_threshold) {
         std::cout << "Warning: Throttle and Brake overlap detected! Throttle: " 
                   << data.throttle << ", Brake: " << data.brake << '\n';
-        this->play_bloop_sound();
+        //this->play_bloop_sound();
+        // Start a new thread that runs the member playback function.
+        std::thread s_bloop_thread = std::thread(&TeensySimPIT::play_bloop_sound, this);
     }
 }
 
@@ -156,7 +158,7 @@ void TeensySimPIT::play_bloop_sound()
 void TeensySimPIT::write_string_to_teensy(const std::string &data)
 {
     // Example: open COM3 (change as needed), send a simple text payload and close.
-    const std::string port = "COM4"; // change to your port, e.g. "COM4"
+    const std::string port = "COM3"; // change to your port, e.g. "COM4"
     if (!open_serial(port, 115200)) {
         std::cerr << "Failed to open serial port " << port << '\n';
         return;
