@@ -293,7 +293,8 @@ bool IracingReader::isConnected()
 {
     if (irsdkClient::instance().isConnected()) {
         disconnect_count = 0;
-    } else if (disconnect_count < 5) {
+	}
+	else if (disconnect_count < 10 * 60 * 5) { // 5 minutes grace period
         disconnect_count++;
     } else {
         std::cout << "Disconnected from iRacing SDK!\n";
