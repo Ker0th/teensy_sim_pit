@@ -66,7 +66,8 @@ void TeensySimPIT::detect_throttle_brake_overlap(const carData& data)
                   << data.throttle << ", Brake: " << data.brake << '\n';
         //this->play_bloop_sound();
         // Start a new thread that runs the member playback function.
-        std::thread s_bloop_thread = std::thread(&TeensySimPIT::play_bloop_sound, this);
+        std::jthread s_bloop_thread = std::jthread(&TeensySimPIT::play_bloop_sound, this);
+        //s_bloop_thread.detach(); // The thread continues even if audioThread goes out of scope;
     }
 }
 
